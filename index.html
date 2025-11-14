@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<title>測試打卡</title>
+</head>
+<body>
+<h2>測試打卡系統</h2>
+<button id="clockInBtn">打卡</button>
+
+<script>
+const API_ENDPOINT = "https://script.google.com/macros/s/AKfycbybSxeE0vPHKcDIY2Byl2F6wd8O_Mvhcr0kpkeQ_L938d4d6yQXLgNHZUHWhvYg4nYQ/exec"; // 替換成你的 Web App URL
+
+document.getElementById("clockInBtn").addEventListener("click", async () => {
+    const now = new Date();
+    const payload = {
+        date: now.toLocaleDateString("zh-TW"),
+        time: now.toLocaleTimeString("zh-TW"),
+        lineId: "TESTLINEID",
+        name: "測試姓名",
+        ip: "127.0.0.1"
+    };
+
+    try {
+        const res = await fetch(API_ENDPOINT, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+        alert(data.message);
+
+    } catch(err) {
+        alert("發生錯誤: " + err);
+    }
+});
+</script>
+</body>
+</html>
