@@ -30,24 +30,30 @@ tr:nth-child(even){background-color:#f2f2f2;}
 .date-buttons button { flex:1; background:#2196F3; color:white; }
 .date-buttons button:hover { background:#1976D2; }
 
-/* 手機版樣式 */
+/* 手機板樣式 */
 @media (max-width: 600px) { 
   .container { padding:20px; } 
   input, select, button { font-size:18px; } 
-  .date-buttons { flex-direction:column; }
-  .date-buttons button { padding:15px; font-size:18px; width:100%; }
 
-  /* 調整登出按鈕與標題間距 */
+  /* 快速日期按鈕直式排列 */
+  .date-buttons { flex-direction: column; }
+  .date-buttons button { width:100%; padding:15px; font-size:18px; }
+
+  /* 登出按鈕手機板調整 */
   #logoutBtn {
-      position: relative;
-      display: block;
-      margin: 0 auto 20px auto; /* 上下間距 */
-      width: 80%;
-      height: 50px;
+      position: absolute; /* 固定右上角 */
+      top: 15px;
+      right: 10px;
+      width: 70%; 
+      max-width: 120px;
+      height: 40px;
+      font-size: 14px;
   }
+
+  /* 標題與表單間距 */
   h2#companyTitle {
-      margin-top: 10px;
-      margin-bottom: 30px; /* 與表單間距 */
+      margin-top: 60px; /* 避免被登出按鈕擋住 */
+      margin-bottom: 30px;
   }
 }
 </style>
@@ -70,7 +76,7 @@ tr:nth-child(even){background-color:#f2f2f2;}
   <!-- 查詢頁 -->
   <div id="querySection" style="display:none;">
     <button id="logoutBtn">登出</button>
-    <h2 id="companyTitle" style="margin-bottom:40px; text-align:center;">打卡紀錄查詢與下載</h2>
+    <h2 id="companyTitle" style="margin-bottom:40px; text-align:center;">出勤打卡紀錄查詢與下載</h2>
 
     <form id="queryForm">
       <label>姓名（可留空）：</label>
@@ -152,7 +158,7 @@ document.getElementById('loginBtn').addEventListener('click', async ()=>{
       companyGlobal = json.company || '奇可';
       document.getElementById('loginForm').style.display='none';
       document.getElementById('querySection').style.display='block';
-      document.getElementById('companyTitle').textContent = `${companyGlobal} 打卡紀錄查詢與下載`;
+      document.getElementById('companyTitle').textContent = `${companyGlobal} 出勤打卡紀錄查詢與下載`;
       await fetchNames();
       await fetchData(formatDateToYMD(todayStr), formatDateToYMD(todayStr), '');
     } else { alert("帳號或密碼錯誤"); }
