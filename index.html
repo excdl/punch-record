@@ -1,4 +1,4 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
@@ -28,7 +28,12 @@ tr:nth-child(even){background-color:#f2f2f2;}
 .date-buttons { display:flex; gap:10px; margin-bottom:15px; flex-wrap:wrap; }
 .date-buttons button { flex:1; background:#2196F3; color:white; }
 .date-buttons button:hover { background:#1976D2; }
-@media (max-width: 600px) { .container { padding:20px; } input, select, button { font-size:18px; } .date-buttons { flex-direction:column; } }
+@media (max-width: 600px) { 
+  .container { padding:20px; } 
+  input, select, button { font-size:18px; } 
+  .date-buttons { flex-direction:column; }
+  .date-buttons button { padding:15px; font-size:18px; }
+}
 </style>
 </head>
 <body>
@@ -231,7 +236,7 @@ document.getElementById('downloadBtn').addEventListener('click', ()=>{
   const format=document.getElementById('format').value;
   const startDate=formatDateToYMD(startInput.value);
   const endDate=formatDateToYMD(endInput.value);
-  const fileName=`${name||'所有人'}_${startDate}_至_${endDate}.${format}`;
+  const fileName=`${companyGlobal}_${name||'所有人'}_${startDate}_至_${endDate}.${format}`;
 
   if(format==="csv"){
     const csv = convertToCSV(data);
@@ -263,33 +268,51 @@ document.querySelectorAll('.quickDateBtn').forEach(btn=>{
   btn.addEventListener('click', async e=>{
     const type=e.target.dataset.type;
     const now=new Date();
-    const todayStr=formatDateToYMD(now.toISOString());
+    const todayStr=now.toISOString().split('T')[0]; // yyyy-MM-dd
     let start='', end=todayStr;
     const name = document.getElementById('name').value;
 
     if(type==='today'){ start=end; }
     else if(type==='week'){ 
-      const firstDay=new Date(now); firstDay.setDate(now.getDate()-now.getDay());
-      start=formatDateToYMD(firstDay.toISOString());
+      const firstDay=new Date(now); 
+      firstDay.setDate(now.getDate()-now.getDay());
+      start=firstDay.toISOString().split('T')[0];
     }
     else if(type==='month'){
       const firstDay=new Date(now.getFullYear(), now.getMonth(), 1);
-      start=formatDateToYMD(firstDay.toISOString());
+      start=firstDay.toISOString().split('T')[0];
     }
     else if(type==='all'){
-      // 直接呼叫 API 查詢全部資料
-      start='1900/01/01'; // 設一個很早的日期
-      end=todayStr;
+      // 抓全部資料
+      const res = await fetch(`${apiBase}?username=${encodeURIComponent(usernameGlobal)}`);
+      const allData = await res.json();
+      if(allData.length===0){ alert("查無資料"); return; }
+      currentData = allData;
+      filteredData = allData;
+      currentPage = 1;
+      renderTablePage();
+
+      // 找最早和最晚日期
+      const dates = allData.map(r=>new Date(r.日期 || r.date || now));
+      const minDate = new Date(Math.min(...dates));
+      const maxDate = new Date(Math.max(...dates));
+      start = minDate.toISOString().split('T')[0];
+      end = maxDate.toISOString().split('T')[0];
+
+      startInput.value = start;
+      endInput.value = end;
+      return;
     }
 
-    startInput.value=start;
-    endInput.value=end;
-    await fetchData(start, end, name);
+    startInput.value = start;
+    endInput.value = end;
+    await fetchData(formatDateToYMD(startInput.value), formatDateToYMD(endInput.value), name);
   });
 });
 </script>
 </body>
 </html>
+
 
 
 
