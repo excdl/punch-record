@@ -6,32 +6,33 @@
 <title>奇可出勤打卡查詢系統</title>
 <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
 <style>
-body { font-family: 'Roboto', "Microsoft JhengHei", Arial, sans-serif; background-color: #f5f7fa; margin:0; padding:0; position:relative; }
-.container { max-width: 700px; margin: 20px auto; padding: 25px; background: #fff; box-shadow: 0 8px 16px rgba(0,0,0,0.1); border-radius: 12px; position:relative; }
+body { font-family: 'Roboto', "Microsoft JhengHei", Arial, sans-serif; background:#f5f7fa; margin:0; padding:0; position:relative; }
+.container { max-width:750px; margin:20px auto; padding:25px; background:#fff; box-shadow:0 8px 16px rgba(0,0,0,0.1); border-radius:12px; position:relative; }
 h2 { text-align:center; color:#333; margin-bottom:20px; font-size:1.4em; }
 label { font-weight:500; display:block; margin-bottom:5px; font-size:0.95em; }
 input, select, button { width:100%; padding:10px 15px; margin-bottom:12px; font-size:16px; border-radius:6px; border:1px solid #ccc; box-sizing:border-box; }
 input:focus, select:focus { border-color:#4CAF50; outline:none; box-shadow:0 0 5px rgba(76,175,80,0.5); }
 button { cursor:pointer; border:none; background:linear-gradient(90deg,#4CAF50,#45A049); color:white; font-weight:600; transition:0.3s; }
 button:hover { background:linear-gradient(90deg,#45A049,#4CAF50); }
-button.gray { background:#aaa; color:#fff; }
-button.gray:hover { background:#888; }
+button.gray { background:#888; color:#fff; }
+button.gray:hover { background:#666; }
 button#logoutBtn { position:absolute; top:15px; right:15px; background:#FF9800; color:white; font-size:1.1em; font-weight:600; padding:8px 16px; border-radius:8px; border:none; cursor:pointer; transform: scale(1.3); }
 button#logoutBtn:hover { background:#FB8C00; }
-table { border-collapse: collapse; width: 100%; margin-top: 20px; border-radius:6px; overflow:hidden; min-width:600px; }
-th, td { border:1px solid #ddd; padding:8px; text-align:center; font-size:0.9em; }
-th { background-color:#4CAF50; color:white; font-weight:500; }
-tr:nth-child(even){background-color:#f2f2f2;}
-.pagination { text-align:center; margin-top:10px; }
-.pagination button { width:auto; margin:0 5px; padding:5px 10px; font-size:14px; }
 .quickBtns { display:flex; gap:10px; margin-bottom:10px; flex-wrap:wrap; }
 .quickBtns button { flex:1; background:#2196F3; color:white; font-weight:500; }
 .quickBtns button:hover { background:#1976D2; }
-#tableContainer { overflow-x:auto; }
-@media (max-width: 600px) { 
-  .container { padding:15px; } 
-  input, select, button { font-size:16px; } 
-  .quickBtns button{font-size:14px;} 
+.table-wrapper { overflow-x:auto; position:relative; max-height:400px; }
+table { border-collapse: collapse; width:100%; min-width:600px; }
+th, td { border:1px solid #ddd; padding:8px; text-align:center; font-size:0.9em; }
+th { background-color:#4CAF50; color:white; position:sticky; top:0; z-index:1; }
+tr:nth-child(even){background-color:#f2f2f2;}
+.pagination { text-align:center; margin-top:10px; }
+.pagination button { width:auto; margin:0 5px; padding:5px 10px; font-size:14px; }
+#tableContainer { margin-top:10px; position:relative; }
+@media (max-width: 600px){
+  .container { padding:15px; }
+  input, select, button { font-size:16px; }
+  .quickBtns button { font-size:14px; }
   th, td { font-size:0.85em; padding:6px 8px; }
 }
 </style>
@@ -53,7 +54,6 @@ tr:nth-child(even){background-color:#f2f2f2;}
   </form>
 
   <div id="querySection" style="display:none;">
-    <!-- 取消 companyTitle -->
     <form id="queryForm">
       <label>姓名（可留空）：</label>
       <select id="name"><option value="">全部（不指定）</option></select>
@@ -76,18 +76,23 @@ tr:nth-child(even){background-color:#f2f2f2;}
     </form>
     <label>快速搜尋：</label>
     <input type="text" id="quickSearch" placeholder="輸入姓名或其他欄位關鍵字">
-    <div id="tableContainer"></div>
+    <div class="table-wrapper" id="tableContainer"></div>
     <div class="pagination" id="pagination"></div>
   </div>
 </div>
 
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <script>
-// ... 這裡 JS 邏輯基本保持不變，只需注意 logoutBtn 顯示/隱藏即可
-
-const apiBase = '你的 GAS URL';
+const apiBase='https://script.google.com/macros/s/AKfycbwzsBpCnqeRGxerNhR-DtnSMF_hZd3_brEYOI2Lnz4ge2srQnuDptkIXkMphoAL4hPJhg/exec';
 let usernameGlobal='', currentData=[], filteredData=[], currentPage=1;
 const pageSize=20;
+
+// 日期初始化
+const today=new Date().toISOString().split('T')[0];
+const startInput=document.getElementById('startDate');
+const endInput=document.getElementById('endDate');
+startInput.value=today; endInput.value=today;
+startInput.setAttribute('max', today); endInput.setAttribute('max', today);
 
 // 登錄
 document.getElementById('loginBtn').addEventListener('click', async ()=>{
@@ -102,8 +107,9 @@ document.getElementById('loginBtn').addEventListener('click', async ()=>{
       document.getElementById('loginForm').style.display='none';
       document.getElementById('querySection').style.display='block';
       document.getElementById('logoutBtn').style.display='block';
+      if(json.company) document.getElementById('mainTitle').textContent=json.company+' 出勤打卡紀錄查詢與下載';
       await fetchNames();
-      await fetchData(new Date().toISOString().split('T')[0], new Date().toISOString().split('T')[0], '');
+      await fetchData(today,today,'');
     }else{ alert("帳號或密碼錯誤"); }
   }catch(err){ console.error(err); alert("登入失敗"); }
 });
@@ -112,15 +118,84 @@ document.getElementById('loginBtn').addEventListener('click', async ()=>{
 document.getElementById('logoutBtn').addEventListener('click', ()=>{
   document.getElementById('querySection').style.display='none';
   document.getElementById('loginForm').style.display='block';
-  document.getElementById('username').value='';
-  document.getElementById('password').value='';
+  document.getElementById('username').value=''; document.getElementById('password').value='';
   document.getElementById('logoutBtn').style.display='none';
+  document.getElementById('mainTitle').textContent='管理者登入';
   currentData=[]; filteredData=[]; currentPage=1;
-  document.getElementById('tableContainer').innerHTML='';
-  document.getElementById('pagination').innerHTML='';
+  document.getElementById('tableContainer').innerHTML=''; document.getElementById('pagination').innerHTML='';
 });
 
-// ... 其餘 fetchNames, fetchData, table render, 分頁, 下載邏輯保持不變
+// 取消
+document.getElementById('cancelBtn').addEventListener('click', ()=>{ document.getElementById('username').value=''; document.getElementById('password').value=''; });
+
+// 取得姓名
+async function fetchNames(){
+  try{
+    const res=await fetch(`${apiBase}?mode=names&username=${encodeURIComponent(usernameGlobal)}`);
+    const json=await res.json();
+    const nameSelect=document.getElementById('name');
+    nameSelect.innerHTML='<option value="">全部（不指定）</option>';
+    json.names.forEach(name=>{ const option=document.createElement('option'); option.value=name; option.textContent=name; nameSelect.appendChild(option); });
+  }catch(err){ console.warn("姓名載入失敗", err); }
+}
+
+// 抓資料
+async function fetchData(startDate,endDate,name){
+  let url=`${apiBase}?username=${encodeURIComponent(usernameGlobal)}&startDate=${startDate}&endDate=${endDate}`;
+  if(name) url+=`&name=${encodeURIComponent(name)}`;
+  const res=await fetch(url);
+  const data=await res.json();
+  if(!data.length){ alert("查無資料"); document.getElementById('tableContainer').innerHTML=''; document.getElementById('pagination').innerHTML=''; filteredData=[]; currentData=[]; return; }
+  currentData=data; filteredData=data; currentPage=1; renderTablePage();
+}
+
+// 顯示表格
+function renderTablePage(){
+  const startIndex=(currentPage-1)*pageSize;
+  const pageData=filteredData.slice(startIndex,startIndex+pageSize);
+  let html='<table><tr>';
+  if(pageData.length===0){ html+='<th>查無資料</th></tr></table>'; document.getElementById('tableContainer').innerHTML=html; document.getElementById('pagination').innerHTML=''; return; }
+  Object.keys(pageData[0]).forEach(k=>html+=`<th>${k}</th>`); html+='</tr>';
+  pageData.forEach(row=>{ html+='<tr>'; Object.values(row).forEach(v=>html+=`<td>${v}</td>`); html+='</tr>'; });
+  html+='</table>'; document.getElementById('tableContainer').innerHTML=html; renderPagination();
+}
+
+// 分頁
+function renderPagination(){
+  const totalPages=Math.ceil(filteredData.length/pageSize);
+  let html=''; if(currentPage>1) html+=`<button onclick="goPage(${currentPage-1})">上一頁</button>`;
+  html+=`第 ${currentPage} / ${totalPages} 頁`; if(currentPage<totalPages) html+=`<button onclick="goPage(${currentPage+1})">下一頁</button>`;
+  document.getElementById('pagination').innerHTML=html;
+}
+function goPage(p){ currentPage=p; renderTablePage(); }
+
+// 搜尋
+document.getElementById('quickSearch').addEventListener('input', e=>{ const keyword=e.target.value.trim().toLowerCase(); filteredData=keyword?currentData.filter(row=>Object.values(row).some(v=>String(v).toLowerCase().includes(keyword))):currentData; currentPage=1; renderTablePage(); });
+
+// 查詢
+document.getElementById('queryBtn').addEventListener('click', async ()=>{ await fetchData(startInput.value,endInput.value,document.getElementById('name').value); });
+
+// 快速按鈕
+document.querySelectorAll('.quickBtns button').forEach(btn=>{ btn.addEventListener('click', async ()=>{
+  const type=btn.dataset.type; let start='',end='';
+  const now=new Date();
+  if(type==='today'){ start=end=now.toISOString().split('T')[0]; }
+  else if(type==='week'){ const day=now.getDay(); const diff=now.getDate()-day+ (day===0?-6:1); const monday=new Date(now.setDate(diff)); start=monday.toISOString().split('T')[0]; end=new Date().toISOString().split('T')[0]; }
+  else if(type==='month'){ const firstDay=new Date(now.getFullYear(),now.getMonth(),1); start=firstDay.toISOString().split('T')[0]; end=new Date().toISOString().split('T')[0]; }
+  else if(type==='all'){ start=''; end=''; }
+  startInput.value=start; endInput.value=end; await fetchData(start,end,document.getElementById('name').value);
+}); });
+
+// 下載
+document.getElementById('downloadBtn').addEventListener('click', ()=>{
+  if(!filteredData.length) return alert("沒有資料可下載！");
+  const data=filteredData; const name=document.getElementById('name').value; const format=document.getElementById('format').value;
+  const start=startInput.value||'全部'; const end=endInput.value||'全部'; const fileName=`${name||'所有人'}_${start}_至_${end}.${format}`;
+  if(format==='csv'){ const csv=convertToCSV(data); downloadBlob(new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8;"}),fileName);}
+  else{ const wb=XLSX.utils.book_new(); const ws=XLSX.utils.json_to_sheet(data); XLSX.utils.book_append_sheet(wb,ws,"打卡紀錄"); downloadBlob(new Blob([XLSX.write(wb,{bookType:"xlsx",type:"array"})],{type:"application/octet-stream"}),fileName);}
+});
+function convertToCSV(data){ const keys=Object.keys(data[0]); const lines=[keys.join(",")]; data.forEach(row=>lines.push(keys.map(k=>`"${row[k]||''}"`).join(","))); return lines.join("\n"); }
+function downloadBlob(blob,fileName){ const link=document.createElement('a'); link.href=URL.createObjectURL(blob); link.download=fileName; link.click(); }
 </script>
 </body>
 </html>
