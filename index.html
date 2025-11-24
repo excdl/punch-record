@@ -1,40 +1,161 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh-Hant">
 <head>
-<meta charset="UTF-8">
-<title>測試打卡</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>打卡資料查詢與下載</title>
+  <style>
+    body {
+      font-family: "Microsoft JhengHei", Arial, sans-serif;
+      padding: 20px;
+      max-width: 500px;
+      margin: auto;
+    }
+
+    label {
+      font-weight: bold;
+      display: block;
+      margin-bottom: 5px;
+    }
+
+    select, input[type="date"], button {
+      width: 100%;
+      margin-bottom: 20px;
+      padding: 10px;
+      font-size: 16px;
+      box-sizing: border-box;
+    }
+
+    button {
+      cursor: pointer;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+    }
+
+    @media (max-width: 600px) {
+      body {
+        padding: 15px;
+      }
+
+      input, select, button {
+        font-size: 18px;
+      }
+    }
+  </style>
 </head>
 <body>
-<h2>測試打卡系統</h2>
-<button id="clockInBtn">打卡</button>
+  <h2>查詢打卡紀錄</h2>
+  <form id="queryForm">
+    <label for="name">姓名（可留空）：</label>
+    <select id="name">
+      <option value="">全部（不指定）</option>
+    </select>
 
-<script>
-const API_ENDPOINT = "https://script.google.com/macros/s/AKfycbybSxeE0vPHKcDIY2Byl2F6wd8O_Mvhcr0kpkeQ_L938d4d6yQXLgNHZUHWhvYg4nYQ/exec"; // 替換成你的 Web App URL
+    <label for="startDate">開始日期：</label>
+    <input type="date" id="startDate" required />
 
-document.getElementById("clockInBtn").addEventListener("click", async () => {
-    const now = new Date();
-    const payload = {
-        date: now.toLocaleDateString("zh-TW"),
-        time: now.toLocaleTimeString("zh-TW"),
-        lineId: "TESTLINEID",
-        name: "測試姓名",
-        ip: "127.0.0.1"
-    };
+    <label for="endDate">結束日期：</label>
+    <input type="date" id="endDate" required />
 
-    try {
-        const res = await fetch(API_ENDPOINT, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
+    <label for="format">下載格式：</label>
+    <select id="format">
+      <option value="csv">CSV</option>
+      <option value="xlsx">XLSX</option>
+    </select>
+
+    <button type="submit">查詢並下載</button>
+  </form>
+
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <script>
+    const apiBase = 'https://script.google.com/macros/s/AKfycbxoYQBICe-t7ulnDHrnX80CvEPMIN8w2n4AN7iZaTNGU5G5yDj8VfaQ3ww6maItBL97/exec';
+
+    // 自動填入今天日期
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('startDate').value = today;
+    document.getElementById('endDate').value = today;
+
+    // 取得姓名選單
+    async function fetchNames() {
+      try {
+        const res = await fetch(`${apiBase}?mode=names`);
+        const json = await res.json();
+        const nameSelect = document.getElementById("name");
+        json.names.forEach(name => {
+          const option = document.createElement("option");
+          option.value = name;
+          option.textContent = name;
+          nameSelect.appendChild(option);
         });
-
-        const data = await res.json();
-        alert(data.message);
-
-    } catch(err) {
-        alert("發生錯誤: " + err);
+      } catch (err) {
+        console.warn("姓名選單載入失敗：", err);
+      }
     }
-});
-</script>
+    fetchNames();
+
+    // 查詢表單送出
+    document.getElementById("queryForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const name = document.getElementById("name").value;
+      const startDate = document.getElementById("startDate").value;
+      const endDate = document.getElementById("endDate").value;
+      const format = document.getElementById("format").value;
+
+      const url = `${apiBase}?startDate=${startDate}&endDate=${endDate}&name=${encodeURIComponent(name)}`;
+      const res = await fetch(url);
+      const data = await res.json();
+
+      if (data.length === 0) {
+        alert("查無資料");
+        return;
+      }
+
+      const fileName = `${name || '所有人'}_${startDate}_至_${endDate}.${format}`;
+      if (format === "csv") {
+        const csv = convertToCSV(data);
+        const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+        downloadBlob(blob, fileName);
+      } else {
+        const workbook = convertToXLSX(data);
+        const blob = new Blob([workbook], { type: "application/octet-stream" });
+        downloadBlob(blob, fileName);
+      }
+    });
+
+    // CSV 格式轉換
+    function convertToCSV(data) {
+      const keys = Object.keys(data[0]);
+      const lines = [keys.join(",")];
+      data.forEach(row => {
+        lines.push(keys.map(k => {
+          if (k.toLowerCase().includes('date')) {
+            return `"${new Date(row[k]).toISOString().split('T')[0]}"`;
+          }
+          return `"${row[k] || ""}"`;
+        }).join(","));
+      });
+      return lines.join("\n");
+    }
+
+    // XLSX 格式轉換
+    function convertToXLSX(data) {
+      const ws = XLSX.utils.json_to_sheet(data, {
+        header: Object.keys(data[0]),
+        dateNF: 'yyyy-mm-dd',
+      });
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "打卡紀錄");
+      return XLSX.write(wb, { bookType: "xlsx", type: "array" });
+    }
+
+    function downloadBlob(blob, fileName) {
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = fileName;
+      link.click();
+    }
+  </script>
 </body>
 </html>
