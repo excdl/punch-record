@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!DOCTYPE html> 
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
@@ -15,6 +15,8 @@ input:focus, select:focus { border-color:#4CAF50; outline:none; box-shadow:0 0 5
 button { cursor:pointer; border:none; font-weight:600; transition:0.3s; }
 #loginBtn, #cancelBtn { background:#1565C0; color:white; }
 #loginBtn:hover, #cancelBtn:hover { background:#0D47A1; }
+#queryBtn, #downloadBtn { background:#4CAF50; color:white; }
+#queryBtn:hover, #downloadBtn:hover { background:#388E3C; }
 #logoutBtn { position:absolute; top:20px; right:20px; width:2cm; height:1.3cm; background:orange; color:white; font-size:16px; border-radius:6px; }
 #logoutBtn:hover { opacity:0.8; }
 table { border-collapse: collapse; width: 100%; margin-top: 20px; border-radius:6px; overflow:hidden; }
@@ -54,10 +56,10 @@ tr:nth-child(even){background-color:#f2f2f2;}
       <select id="name"><option value="">全部（不指定）</option></select>
 
       <div class="date-buttons">
-        <button type="button" data-type="today">今天</button>
-        <button type="button" data-type="week">本週</button>
-        <button type="button" data-type="month">本月</button>
-        <button type="button" data-type="all">全部</button>
+        <button type="button" class="quickDateBtn" data-type="today">今天</button>
+        <button type="button" class="quickDateBtn" data-type="week">本週</button>
+        <button type="button" class="quickDateBtn" data-type="month">本月</button>
+        <button type="button" class="quickDateBtn" data-type="all">全部</button>
       </div>
 
       <label>開始日期：</label>
@@ -259,27 +261,36 @@ function downloadBlob(blob,fileName){
 // ===== 快速日期按鈕 =====
 document.querySelectorAll('.quickDateBtn').forEach(btn=>{
   btn.addEventListener('click', async e=>{
-    const range=e.target.dataset.range;
+    const type=e.target.dataset.type;
     const now=new Date();
-    let start,todayStr=formatDateToYMD(now.toISOString());
-    if(range==='today'){ start=todayStr; endInput.value=todayStr; startInput.value=todayStr; }
-    else if(range==='week'){ 
-      const firstDay=new Date(now.setDate(now.getDate()-now.getDay()));
+    const todayStr=formatDateToYMD(now.toISOString());
+    let start='', end=todayStr;
+    const name = document.getElementById('name').value;
+
+    if(type==='today'){ start=end; }
+    else if(type==='week'){ 
+      const firstDay=new Date(now); firstDay.setDate(now.getDate()-now.getDay());
       start=formatDateToYMD(firstDay.toISOString());
-      startInput.value=start; endInput.value=todayStr;
     }
-    else if(range==='month'){
+    else if(type==='month'){
       const firstDay=new Date(now.getFullYear(), now.getMonth(), 1);
       start=formatDateToYMD(firstDay.toISOString());
-      startInput.value=start; endInput.value=todayStr;
     }
-    else if(range==='all'){ start=''; startInput.value=''; endInput.value=''; }
-    await fetchData(start, todayStr, document.getElementById('name').value);
+    else if(type==='all'){
+      // 直接呼叫 API 查詢全部資料
+      start='1900/01/01'; // 設一個很早的日期
+      end=todayStr;
+    }
+
+    startInput.value=start;
+    endInput.value=end;
+    await fetchData(start, end, name);
   });
 });
 </script>
 </body>
 </html>
+
 
 
 
