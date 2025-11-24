@@ -1,161 +1,188 @@
-<!DOCTYPE html>
+<!DOCTYPE html> 
 <html lang="zh-Hant">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>打卡資料查詢與下載</title>
-  <style>
-    body {
-      font-family: "Microsoft JhengHei", Arial, sans-serif;
-      padding: 20px;
-      max-width: 500px;
-      margin: auto;
-    }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>打卡資料查詢與下載</title>
+<style>
+/* 全局設定 */
+body {
+  font-family: "Microsoft JhengHei", Arial, sans-serif;
+  background: #f4f7f9;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 100vh;
+}
 
-    label {
-      font-weight: bold;
-      display: block;
-      margin-bottom: 5px;
-    }
+/* 卡片容器 */
+.container {
+  background: #ffffff;
+  margin: 60px 20px;
+  padding: 30px 40px;
+  border-radius: 12px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+  width: 100%;
+  max-width: 500px;
+  transition: transform 0.3s;
+}
+.container:hover {
+  transform: translateY(-3px);
+}
 
-    select, input[type="date"], button {
-      width: 100%;
-      margin-bottom: 20px;
-      padding: 10px;
-      font-size: 16px;
-      box-sizing: border-box;
-    }
+/* 標題 */
+h2 {
+  text-align: center;
+  color: #333;
+  margin-bottom: 25px;
+}
 
-    button {
-      cursor: pointer;
-      background-color: #4CAF50;
-      color: white;
-      border: none;
-    }
+/* 表單欄位 */
+label {
+  display: block;
+  margin: 12px 0 6px;
+  font-weight: 600;
+  color: #555;
+}
 
-    @media (max-width: 600px) {
-      body {
-        padding: 15px;
-      }
+select, input[type="date"], button {
+  width: 100%;
+  padding: 12px 15px;
+  font-size: 16px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  box-sizing: border-box;
+  transition: all 0.3s;
+}
 
-      input, select, button {
-        font-size: 18px;
-      }
-    }
-  </style>
+select:focus, input[type="date"]:focus {
+  border-color: #4CAF50;
+  outline: none;
+  box-shadow: 0 0 5px rgba(76,175,80,0.4);
+}
+
+/* 按鈕 */
+button {
+  background: linear-gradient(90deg, #4CAF50, #43A047);
+  color: white;
+  font-weight: bold;
+  border: none;
+  cursor: pointer;
+  margin-top: 15px;
+  transition: all 0.3s;
+}
+
+button:hover {
+  background: linear-gradient(90deg, #43A047, #388E3C);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+}
+
+/* 響應式 */
+@media (max-width: 600px) {
+  .container {
+    padding: 20px;
+    margin: 40px 15px;
+  }
+
+  select, input[type="date"], button {
+    font-size: 18px;
+    padding: 14px;
+  }
+}
+</style>
 </head>
 <body>
-  <h2>查詢打卡紀錄</h2>
-  <form id="queryForm">
-    <label for="name">姓名（可留空）：</label>
-    <select id="name">
-      <option value="">全部（不指定）</option>
-    </select>
 
-    <label for="startDate">開始日期：</label>
-    <input type="date" id="startDate" required />
+<div class="container">
+<h2>查詢打卡紀錄</h2>
 
-    <label for="endDate">結束日期：</label>
-    <input type="date" id="endDate" required />
+<form id="queryForm">
+  <label>姓名</label>
+  <select id="name"><option value="">全部</option></select>
 
-    <label for="format">下載格式：</label>
-    <select id="format">
-      <option value="csv">CSV</option>
-      <option value="xlsx">XLSX</option>
-    </select>
+  <label>開始日期</label>
+  <input type="date" id="startDate" required>
 
-    <button type="submit">查詢並下載</button>
-  </form>
+  <label>結束日期</label>
+  <input type="date" id="endDate" required>
 
-  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
-  <script>
-    const apiBase = 'https://script.google.com/macros/s/AKfycbxoYQBICe-t7ulnDHrnX80CvEPMIN8w2n4AN7iZaTNGU5G5yDj8VfaQ3ww6maItBL97/exec';
+  <label>下載格式</label>
+  <select id="format">
+    <option value="csv">CSV</option>
+    <option value="xlsx">XLSX</option>
+  </select>
 
-    // 自動填入今天日期
-    const today = new Date().toISOString().split('T')[0];
-    document.getElementById('startDate').value = today;
-    document.getElementById('endDate').value = today;
+  <button type="submit">查詢並下載</button>
+</form>
+</div>
 
-    // 取得姓名選單
-    async function fetchNames() {
-      try {
-        const res = await fetch(`${apiBase}?mode=names`);
-        const json = await res.json();
-        const nameSelect = document.getElementById("name");
-        json.names.forEach(name => {
-          const option = document.createElement("option");
-          option.value = name;
-          option.textContent = name;
-          nameSelect.appendChild(option);
-        });
-      } catch (err) {
-        console.warn("姓名選單載入失敗：", err);
-      }
-    }
-    fetchNames();
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<script>
+const apiBase = "https://script.google.com/macros/s/AKfycbzl5S6TZPK2C5UVKb99f327u0MHLovQoHaf3gWxLUy59_bq9enoVJnnBjzFWgqZemxk9A/exec"; // 替換為你的 GAS URL
 
-    // 查詢表單送出
-    document.getElementById("queryForm").addEventListener("submit", async (e) => {
-      e.preventDefault();
+const today = new Date().toISOString().split("T")[0];
+document.getElementById("startDate").value = today;
+document.getElementById("endDate").value = today;
 
-      const name = document.getElementById("name").value;
-      const startDate = document.getElementById("startDate").value;
-      const endDate = document.getElementById("endDate").value;
-      const format = document.getElementById("format").value;
+async function fetchNames(){
+  const res = await fetch(`${apiBase}?mode=names`, {credentials: "include"});
+  const data = await res.json();
+  if(data.error==="unauthorized") window.location.href="login.html";
+  data.names.forEach(n=>{
+    const o=document.createElement("option");
+    o.value=o.textContent=n;
+    document.getElementById("name").appendChild(o);
+  });
+}
+fetchNames();
 
-      const url = `${apiBase}?startDate=${startDate}&endDate=${endDate}&name=${encodeURIComponent(name)}`;
-      const res = await fetch(url);
-      const data = await res.json();
+document.getElementById("queryForm").addEventListener("submit", async(e)=>{
+  e.preventDefault();
+  const name=document.getElementById("name").value;
+  const start=document.getElementById("startDate").value;
+  const end=document.getElementById("endDate").value;
+  const format=document.getElementById("format").value;
 
-      if (data.length === 0) {
-        alert("查無資料");
-        return;
-      }
+  const url=`${apiBase}?name=${encodeURIComponent(name)}&startDate=${start}&endDate=${end}`;
+  const res=await fetch(url,{credentials:"include"});
+  const data=await res.json();
 
-      const fileName = `${name || '所有人'}_${startDate}_至_${endDate}.${format}`;
-      if (format === "csv") {
-        const csv = convertToCSV(data);
-        const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
-        downloadBlob(blob, fileName);
-      } else {
-        const workbook = convertToXLSX(data);
-        const blob = new Blob([workbook], { type: "application/octet-stream" });
-        downloadBlob(blob, fileName);
-      }
-    });
+  if(data.error==="unauthorized") window.location.href="login.html";
+  if(data.length===0){ alert("查無資料"); return; }
 
-    // CSV 格式轉換
-    function convertToCSV(data) {
-      const keys = Object.keys(data[0]);
-      const lines = [keys.join(",")];
-      data.forEach(row => {
-        lines.push(keys.map(k => {
-          if (k.toLowerCase().includes('date')) {
-            return `"${new Date(row[k]).toISOString().split('T')[0]}"`;
-          }
-          return `"${row[k] || ""}"`;
-        }).join(","));
-      });
-      return lines.join("\n");
-    }
+  const file=`${name||"所有人"}_${start}至${end}.${format}`;
+  if(format==="csv"){
+    const csv=convertToCSV(data);
+    downloadBlob(new Blob(["\uFEFF"+csv],{type:"text/csv"}),file);
+  }else{
+    const wb=XLSX.utils.book_new();
+    const ws=XLSX.utils.json_to_sheet(data);
+    XLSX.utils.book_append_sheet(wb,ws,"打卡紀錄");
+    const xlsx=XLSX.write(wb,{bookType:"xlsx",type:"array"});
+    downloadBlob(new Blob([xlsx]),file);
+  }
+});
 
-    // XLSX 格式轉換
-    function convertToXLSX(data) {
-      const ws = XLSX.utils.json_to_sheet(data, {
-        header: Object.keys(data[0]),
-        dateNF: 'yyyy-mm-dd',
-      });
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "打卡紀錄");
-      return XLSX.write(wb, { bookType: "xlsx", type: "array" });
-    }
+function convertToCSV(data){
+  const keys=Object.keys(data[0]);
+  const lines=[keys.join(",")];
+  data.forEach(r=>lines.push(keys.map(k=>`"${r[k]||""}"`).join(",")));
+  return lines.join("\n");
+}
+function downloadBlob(blob,filename){
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download=filename;
+  a.click();
+}
+</script>
 
-    function downloadBlob(blob, fileName) {
-      const link = document.createElement("a");
-      link.href = URL.createObjectURL(blob);
-      link.download = fileName;
-      link.click();
-    }
+</body>
+</html>
+
   </script>
 </body>
 </html>
