@@ -25,14 +25,30 @@ th { background-color:#4CAF50; color:white; font-weight:500; }
 tr:nth-child(even){background-color:#f2f2f2;}
 .pagination { text-align:center; margin-top:10px; }
 .pagination button { width:auto; margin:0 5px; padding:5px 10px; font-size:14px; }
+
 .date-buttons { display:flex; gap:10px; margin-bottom:15px; flex-wrap:wrap; }
 .date-buttons button { flex:1; background:#2196F3; color:white; }
 .date-buttons button:hover { background:#1976D2; }
+
+/* 手機版樣式 */
 @media (max-width: 600px) { 
   .container { padding:20px; } 
   input, select, button { font-size:18px; } 
   .date-buttons { flex-direction:column; }
-  .date-buttons button { padding:15px; font-size:18px; }
+  .date-buttons button { padding:15px; font-size:18px; width:100%; }
+
+  /* 調整登出按鈕與標題間距 */
+  #logoutBtn {
+      position: relative;
+      display: block;
+      margin: 0 auto 20px auto; /* 上下間距 */
+      width: 80%;
+      height: 50px;
+  }
+  h2#companyTitle {
+      margin-top: 10px;
+      margin-bottom: 30px; /* 與表單間距 */
+  }
 }
 </style>
 </head>
@@ -98,7 +114,6 @@ let filteredData = [];
 let currentPage = 1;
 const pageSize = 20;
 
-// ===== 日期初始化 =====
 const today = new Date();
 const todayStr = today.toISOString().split('T')[0];
 const startInput = document.getElementById('startDate');
@@ -123,7 +138,7 @@ function formatDateToYMD(dateStr){
   return `${yyyy}/${mm}/${dd}`;
 }
 
-// ===== 登錄 =====
+// 登錄
 document.getElementById('loginBtn').addEventListener('click', async ()=>{
   const username = document.getElementById('username').value.trim();
   const password = document.getElementById('password').value.trim();
@@ -262,7 +277,7 @@ function downloadBlob(blob,fileName){
   link.click();
 }
 
-// ===== 快速日期按鈕 =====
+// 快速日期按鈕
 document.querySelectorAll('.quickDateBtn').forEach(btn=>{
   btn.addEventListener('click', async e=>{
     const type=e.target.dataset.type;
