@@ -61,7 +61,8 @@ tr:nth-child(even){background-color:#f2f2f2;}
       <select id="name"><option value="">全部（不指定）</option></select>
 
       <div class="date-buttons">
-        <button type="button" class="quickDateBtn" data-type="today">今天</button>
+        <button type="button" class="quickDateBtn" data-type="lastMonth">上月</button>
+        <button type="button" class="quickDateBtn" data-type="today">今日</button>
         <button type="button" class="quickDateBtn" data-type="week">本週</button>
         <button type="button" class="quickDateBtn" data-type="month">本月</button>
       </div>
@@ -107,7 +108,6 @@ endInput.value = todayStr;
 startInput.setAttribute('max', todayStr);
 endInput.setAttribute('max', todayStr);
 
-// ===== 本地時間 yyyy-MM-dd =====
 function toLocalYMD(date){
   const yyyy = date.getFullYear();
   const mm = ("0"+(date.getMonth()+1)).slice(-2);
@@ -115,7 +115,6 @@ function toLocalYMD(date){
   return `${yyyy}-${mm}-${dd}`;
 }
 
-// ===== yyyy/MM/dd =====
 function formatDateToYMD(dateStr){
   const date = new Date(dateStr);
   const yyyy = date.getFullYear();
@@ -145,13 +144,11 @@ document.getElementById('loginBtn').addEventListener('click', async ()=>{
   } catch(err){ console.error(err); alert("登入失敗，請稍後再試"); }
 });
 
-// ===== 取消 =====
 document.getElementById('cancelBtn').addEventListener('click', ()=>{
   document.getElementById('username').value='';
   document.getElementById('password').value='';
 });
 
-// ===== 登出 =====
 document.getElementById('logoutBtn').addEventListener('click', ()=>{
   document.getElementById('querySection').style.display='none';
   document.getElementById('loginForm').style.display='block';
@@ -160,7 +157,6 @@ document.getElementById('logoutBtn').addEventListener('click', ()=>{
   usernameGlobal=''; companyGlobal='';
 });
 
-// ===== 取得姓名下拉 =====
 async function fetchNames(){
   try{
     const res = await fetch(`${apiBase}?mode=names&username=${encodeURIComponent(usernameGlobal)}`);
@@ -174,7 +170,6 @@ async function fetchNames(){
   }catch(err){ console.warn("姓名載入失敗", err); }
 }
 
-// ===== 查詢函數 =====
 async function fetchData(startDate, endDate, name){
   let url = `${apiBase}?username=${encodeURIComponent(usernameGlobal)}&startDate=${startDate}&endDate=${endDate}`;
   if(name) url += `&name=${encodeURIComponent(name)}`;
@@ -191,7 +186,6 @@ async function fetchData(startDate, endDate, name){
   currentData=data; filteredData=data; currentPage=1; renderTablePage();
 }
 
-// ===== 顯示分頁 =====
 function renderTablePage(){
   const startIndex = (currentPage-1)*pageSize;
   const pageData = filteredData.slice(startIndex,startIndex+pageSize);
@@ -212,7 +206,6 @@ function renderTablePage(){
   renderPagination();
 }
 
-// ===== 分頁控制 =====
 function renderPagination(){
   const totalPages = Math.ceil(filteredData.length/pageSize);
   let html='';
@@ -223,20 +216,19 @@ function renderPagination(){
 }
 function goPage(p){ currentPage=p; renderTablePage(); }
 
-// ===== 快速搜尋 =====
 document.getElementById('quickSearch').addEventListener('input', e=>{
   const keyword=e.target.value.trim().toLowerCase();
   filteredData = keyword ? currentData.filter(row=>Object.values(row).some(v=>String(v).toLowerCase().includes(keyword))) : currentData;
   currentPage=1; renderTablePage();
 });
 
-// ===== 查詢/下載按鈕 =====
 document.getElementById('queryBtn').addEventListener('click', async ()=>{
   const name=document.getElementById('name').value;
   const startDate=formatDateToYMD(startInput.value);
   const endDate=formatDateToYMD(endInput.value);
   await fetchData(startDate,endDate,name);
 });
+
 document.getElementById('downloadBtn').addEventListener('click', ()=>{
   if(!filteredData.length) return alert("沒有資料可下載！");
   const data=filteredData;
@@ -257,7 +249,6 @@ document.getElementById('downloadBtn').addEventListener('click', ()=>{
   }
 });
 
-// ===== CSV / Blob 下載輔助 =====
 function convertToCSV(data){
   const keys=Object.keys(data[0]);
   const lines=[keys.join(",")];
@@ -276,8 +267,7 @@ document.querySelectorAll('.quickDateBtn').forEach(btn=>{
   btn.addEventListener('click', async e=>{
     const type=e.target.dataset.type;
     const now=new Date();
-    const todayLocal = toLocalYMD(now);
-    let start='', end=todayLocal;
+    let start='', end=toLocalYMD(now);
     const name = document.getElementById('name').value;
 
     if(type==='today'){ start=end; }
@@ -290,6 +280,12 @@ document.querySelectorAll('.quickDateBtn').forEach(btn=>{
       const firstDayMonth = new Date(now.getFullYear(), now.getMonth(), 1);
       start = toLocalYMD(firstDayMonth);
     }
+    else if(type==='lastMonth'){
+      const firstDayLastMonth = new Date(now.getFullYear(), now.getMonth()-1, 1);
+      const lastDayLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+      start = toLocalYMD(firstDayLastMonth);
+      end = toLocalYMD(lastDayLastMonth);
+    }
 
     startInput.value = start;
     endInput.value = end;
@@ -299,6 +295,7 @@ document.querySelectorAll('.quickDateBtn').forEach(btn=>{
 </script>
 </body>
 </html>
+
 
 
 
