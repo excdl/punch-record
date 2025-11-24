@@ -1,187 +1,263 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>打卡資料查詢與下載</title>
+<title>多公司打卡查詢系統</title>
+<link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
 <style>
-/* 全局設定 */
-body {
-  font-family: "Microsoft JhengHei", Arial, sans-serif;
-  background: #f4f7f9;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  min-height: 100vh;
-}
-
-/* 卡片容器 */
-.container {
-  background: #ffffff;
-  margin: 60px 20px;
-  padding: 30px 40px;
-  border-radius: 12px;
-  box-shadow: 0 8px 20px rgba(0,0,0,0.1);
-  width: 100%;
-  max-width: 500px;
-  transition: transform 0.3s;
-}
-.container:hover {
-  transform: translateY(-3px);
-}
-
-/* 標題 */
-h2 {
-  text-align: center;
-  color: #333;
-  margin-bottom: 25px;
-}
-
-/* 表單欄位 */
-label {
-  display: block;
-  margin: 12px 0 6px;
-  font-weight: 600;
-  color: #555;
-}
-
-select, input[type="date"], button {
-  width: 100%;
-  padding: 12px 15px;
-  font-size: 16px;
-  border-radius: 8px;
-  border: 1px solid #ddd;
-  box-sizing: border-box;
-  transition: all 0.3s;
-}
-
-select:focus, input[type="date"]:focus {
-  border-color: #4CAF50;
-  outline: none;
-  box-shadow: 0 0 5px rgba(76,175,80,0.4);
-}
-
-/* 按鈕 */
-button {
-  background: linear-gradient(90deg, #4CAF50, #43A047);
-  color: white;
-  font-weight: bold;
-  border: none;
-  cursor: pointer;
-  margin-top: 15px;
-  transition: all 0.3s;
-}
-
-button:hover {
-  background: linear-gradient(90deg, #43A047, #388E3C);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 10px rgba(0,0,0,0.15);
-}
-
-/* 響應式 */
-@media (max-width: 600px) {
+  body {
+    font-family: 'Roboto', "Microsoft JhengHei", Arial, sans-serif;
+    background-color: #f5f7fa;
+    margin: 0;
+    padding: 0;
+  }
   .container {
-    padding: 20px;
-    margin: 40px 15px;
+    max-width: 700px;
+    margin: 40px auto;
+    padding: 30px;
+    background: #ffffff;
+    box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+    border-radius: 10px;
   }
-
-  select, input[type="date"], button {
-    font-size: 18px;
-    padding: 14px;
+  h2 {
+    text-align: center;
+    color: #333;
+    margin-bottom: 25px;
   }
-}
+  label {
+    font-weight: 500;
+    display: block;
+    margin-bottom: 5px;
+  }
+  input, select, button {
+    width: 100%;
+    padding: 10px 15px;
+    margin-bottom: 20px;
+    font-size: 16px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    box-sizing: border-box;
+  }
+  input:focus, select:focus {
+    border-color: #4CAF50;
+    outline: none;
+    box-shadow: 0 0 5px rgba(76, 175, 80, 0.5);
+  }
+  button {
+    cursor: pointer;
+    border: none;
+    background: linear-gradient(90deg, #4CAF50, #45A049);
+    color: white;
+    font-weight: 600;
+    transition: 0.3s;
+  }
+  button:hover {
+    background: linear-gradient(90deg, #45A049, #4CAF50);
+  }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    margin-top: 20px;
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  th, td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align:center;
+  }
+  th {
+    background-color: #4CAF50;
+    color: white;
+    font-weight: 500;
+  }
+  tr:nth-child(even){background-color: #f2f2f2;}
+  @media (max-width: 600px) {
+    .container { padding: 20px; }
+    input, select, button { font-size: 18px; }
+  }
 </style>
 </head>
 <body>
 
 <div class="container">
-<h2>查詢打卡紀錄</h2>
+  <h2>管理者登入</h2>
+  <form id="loginForm">
+    <label>帳號：</label>
+    <input type="text" id="username" required>
+    <label>密碼：</label>
+    <input type="password" id="password" required>
+    <button type="submit">登入</button>
+  </form>
 
-<form id="queryForm">
-  <label>姓名</label>
-  <select id="name"><option value="">全部</option></select>
+  <div id="querySection" style="display:none;">
+    <h2>查詢打卡紀錄</h2>
+    <form id="queryForm">
+      <label>姓名（可留空）：</label>
+      <select id="name">
+        <option value="">全部（不指定）</option>
+      </select>
 
-  <label>開始日期</label>
-  <input type="date" id="startDate" required>
+      <label>開始日期：</label>
+      <input type="date" id="startDate">
+      <label>結束日期：</label>
+      <input type="date" id="endDate">
 
-  <label>結束日期</label>
-  <input type="date" id="endDate" required>
+      <label>下載格式：</label>
+      <select id="format">
+        <option value="csv">CSV</option>
+        <option value="xlsx">XLSX</option>
+      </select>
 
-  <label>下載格式</label>
-  <select id="format">
-    <option value="csv">CSV</option>
-    <option value="xlsx">XLSX</option>
-  </select>
-
-  <button type="submit">查詢並下載</button>
-</form>
+      <button type="submit">查詢並下載</button>
+    </form>
+    <div id="tableContainer"></div>
+  </div>
 </div>
 
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <script>
-const apiBase = "https://script.google.com/macros/s/AKfycbzl5S6TZPK2C5UVKb99f327u0MHLovQoHaf3gWxLUy59_bq9enoVJnnBjzFWgqZemxk9A/exec"; // 替換為你的 GAS URL
+const apiBase = 'https://script.google.com/macros/s/AKfycbxHucH-5b9D_x9Jcwg7ubXpw96kH7iOJehy25SuVw67nk1zrU9TSQtZPPNfVq8E9ldDaA/exec'; // 替換成你的 GAS 網址
+let usernameGlobal = '';
 
-const today = new Date().toISOString().split("T")[0];
-document.getElementById("startDate").value = today;
-document.getElementById("endDate").value = today;
+// ======== 初始化日期 ========
+const today = new Date().toISOString().split('T')[0];
+const startInput = document.getElementById('startDate');
+const endInput = document.getElementById('endDate');
+startInput.value = today;
+endInput.value = today;
+startInput.setAttribute('max', today);
+endInput.setAttribute('max', today);
 
-async function fetchNames(){
-  const res = await fetch(`${apiBase}?mode=names`, {credentials: "include"});
-  const data = await res.json();
-  if(data.error==="unauthorized") window.location.href="login.html";
-  data.names.forEach(n=>{
-    const o=document.createElement("option");
-    o.value=o.textContent=n;
-    document.getElementById("name").appendChild(o);
-  });
-}
-fetchNames();
+// 避免開始日期大於結束日期
+startInput.addEventListener('change', function(){
+  if(this.value > endInput.value) endInput.value = this.value;
+});
+endInput.addEventListener('change', function(){
+  if(this.value < startInput.value) startInput.value = this.value;
+});
 
-document.getElementById("queryForm").addEventListener("submit", async(e)=>{
+// ======== 登入 ========
+document.getElementById('loginForm').addEventListener('submit', async e => {
   e.preventDefault();
-  const name=document.getElementById("name").value;
-  const start=document.getElementById("startDate").value;
-  const end=document.getElementById("endDate").value;
-  const format=document.getElementById("format").value;
-
-  const url=`${apiBase}?name=${encodeURIComponent(name)}&startDate=${start}&endDate=${end}`;
-  const res=await fetch(url,{credentials:"include"});
-  const data=await res.json();
-
-  if(data.error==="unauthorized") window.location.href="login.html";
-  if(data.length===0){ alert("查無資料"); return; }
-
-  const file=`${name||"所有人"}_${start}至${end}.${format}`;
-  if(format==="csv"){
-    const csv=convertToCSV(data);
-    downloadBlob(new Blob(["\uFEFF"+csv],{type:"text/csv"}),file);
-  }else{
-    const wb=XLSX.utils.book_new();
-    const ws=XLSX.utils.json_to_sheet(data);
-    XLSX.utils.book_append_sheet(wb,ws,"打卡紀錄");
-    const xlsx=XLSX.write(wb,{bookType:"xlsx",type:"array"});
-    downloadBlob(new Blob([xlsx]),file);
+  const username = document.getElementById('username').value;
+  const password = document.getElementById('password').value;
+  const res = await fetch(`${apiBase}?mode=login&username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`);
+  const json = await res.json();
+  if(json.success){
+    usernameGlobal = username;
+    alert('登入成功');
+    document.getElementById('loginForm').style.display='none';
+    document.getElementById('querySection').style.display='block';
+    await fetchNames();
+    await autoQueryToday();
+  } else {
+    alert('帳號或密碼錯誤');
   }
 });
 
+// ======== 取得姓名下拉 ========
+async function fetchNames(){
+  try {
+    const res = await fetch(`${apiBase}?mode=names&username=${encodeURIComponent(usernameGlobal)}`);
+    const json = await res.json();
+    const nameSelect = document.getElementById("name");
+    json.names.forEach(name=>{
+      const option = document.createElement("option");
+      option.value = name;
+      option.textContent = name;
+      nameSelect.appendChild(option);
+    });
+  } catch(err){ console.warn("姓名載入失敗", err); }
+}
+
+// ======== 自動抓今日打卡 ========
+async function autoQueryToday(){
+  const url = `${apiBase}?username=${encodeURIComponent(usernameGlobal)}&startDate=${today}&endDate=${today}`;
+  const res = await fetch(url);
+  const data = await res.json();
+  if(data.length === 0) return;
+  renderTable(data);
+}
+
+// ======== 查詢表單送出 ========
+document.getElementById("queryForm").addEventListener("submit", async e=>{
+  e.preventDefault();
+  const name = document.getElementById("name").value;
+  const startDate = startInput.value;
+  const endDate = endInput.value;
+  const format = document.getElementById("format").value;
+
+  let url = `${apiBase}?username=${encodeURIComponent(usernameGlobal)}`;
+  if(startDate) url += `&startDate=${startDate}`;
+  if(endDate) url += `&endDate=${endDate}`;
+  if(name) url += `&name=${encodeURIComponent(name)}`;
+
+  const res = await fetch(url);
+  const data = await res.json();
+  if(data.length === 0){
+    alert("查無資料");
+    document.getElementById('tableContainer').innerHTML = '';
+    return;
+  }
+
+  renderTable(data);
+
+  const fileName = `${name||'所有人'}_${startDate}_至_${endDate}.${format}`;
+  if(format==="csv"){
+    const csv = convertToCSV(data);
+    const blob = new Blob(["\uFEFF"+csv], {type:"text/csv;charset=utf-8;"});
+    downloadBlob(blob, fileName);
+  } else {
+    const workbook = convertToXLSX(data);
+    const blob = new Blob([workbook], {type:"application/octet-stream"});
+    downloadBlob(blob, fileName);
+  }
+});
+
+// ======== 表格顯示 ========
+function renderTable(data){
+  let html = `<table><tr>`;
+  Object.keys(data[0]).forEach(key => html += `<th>${key}</th>`);
+  html += `</tr>`;
+  data.forEach(row=>{
+    html += `<tr>`;
+    Object.values(row).forEach(val => html += `<td>${val}</td>`);
+    html += `</tr>`;
+  });
+  html += `</table>`;
+  document.getElementById('tableContainer').innerHTML = html;
+}
+
+// ======== CSV / XLSX ========
 function convertToCSV(data){
-  const keys=Object.keys(data[0]);
-  const lines=[keys.join(",")];
-  data.forEach(r=>lines.push(keys.map(k=>`"${r[k]||""}"`).join(",")));
+  const keys = Object.keys(data[0]);
+  const lines = [keys.join(",")];
+  data.forEach(row=>{
+    lines.push(keys.map(k=>`"${row[k]||''}"`).join(","));
+  });
   return lines.join("\n");
 }
-function downloadBlob(blob,filename){
-  const a=document.createElement("a");
-  a.href=URL.createObjectURL(blob);
-  a.download=filename;
-  a.click();
+function convertToXLSX(data){
+  const ws = XLSX.utils.json_to_sheet(data);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "打卡紀錄");
+  return XLSX.write(wb,{bookType:"xlsx", type:"array"});
+}
+
+// ======== 下載 ========
+function downloadBlob(blob, fileName){
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = fileName;
+  link.click();
 }
 </script>
 
 </body>
 </html>
+
 
   </script>
 </body>
