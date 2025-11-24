@@ -152,7 +152,7 @@ document.getElementById('loginBtn').addEventListener('click', async ()=>{
       companyGlobal = json.company || '奇可';
       document.getElementById('loginForm').style.display='none';
       document.getElementById('querySection').style.display='block';
-      document.getElementById('companyTitle').textContent = `${companyGlobal} 出勤打卡紀錄查詢與下載`;
+      document.getElementById('companyTitle').textContent = `${companyGlobal} 打卡紀錄查詢與下載`;
       await fetchNames();
       await fetchData(formatDateToYMD(todayStr), formatDateToYMD(todayStr), '');
     } else { alert("帳號或密碼錯誤"); }
