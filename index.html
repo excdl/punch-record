@@ -12,59 +12,28 @@ h2 { text-align:center; color:#333; margin-bottom:25px; }
 label { font-weight:500; display:block; margin-bottom:5px; }
 input, select, button { width:100%; padding:10px 15px; margin-bottom:15px; font-size:16px; border-radius:6px; border:1px solid #ccc; box-sizing:border-box; }
 input:focus, select:focus { border-color:#4CAF50; outline:none; box-shadow:0 0 5px rgba(76,175,80,0.5); }
-
-/* 登錄頁按鈕深藍色 */
-#loginForm button { background: linear-gradient(90deg,#003366,#002244); color:white; font-weight:600; transition:0.3s; }
-#loginForm button:hover { background: linear-gradient(90deg,#002244,#003366); }
-
-/* 查詢按鈕綠色 */
-#queryBtn, #downloadBtn { cursor:pointer; border:none; background:linear-gradient(90deg,#4CAF50,#45A049); color:white; font-weight:600; transition:0.3s; }
-#queryBtn:hover, #downloadBtn:hover { background:linear-gradient(90deg,#45A049,#4CAF50); }
-
-/* 表格 */
+button { cursor:pointer; border:none; font-weight:600; transition:0.3s; }
+#loginBtn, #cancelBtn { background:#1565C0; color:white; }
+#loginBtn:hover, #cancelBtn:hover { background:#0D47A1; }
+#logoutBtn { position:absolute; top:20px; right:20px; width:2cm; height:1.3cm; background:orange; color:white; font-size:16px; border-radius:6px; }
+#logoutBtn:hover { opacity:0.8; }
 table { border-collapse: collapse; width: 100%; margin-top: 20px; border-radius:6px; overflow:hidden; }
 th, td { border:1px solid #ddd; padding:8px; text-align:center; }
 th { background-color:#4CAF50; color:white; font-weight:500; }
 tr:nth-child(even){background-color:#f2f2f2;}
 .pagination { text-align:center; margin-top:10px; }
 .pagination button { width:auto; margin:0 5px; padding:5px 10px; font-size:14px; }
-
-/* 快速按鈕水平排列 */
-.quickContainer {
-  display:flex; justify-content:space-between; margin-bottom:15px;
-}
-.quickDate {
-  flex:1; margin-right:5px; background:#007BFF; color:white; font-weight:600; text-align:center; padding:10px 0; border-radius:6px; cursor:pointer;
-}
-.quickDate:last-child { margin-right:0; }
-
-/* 登出按鈕右上 */
-#logoutBtn {
-  position:absolute; top:15px; right:15px;
-  width:2cm; height:1.3cm;
-  background:#FF6600; color:white; font-weight:600; border:none; border-radius:6px; cursor:pointer;
-  font-size:16px;
-}
-
-/* 手機版優化 */
-@media (max-width: 600px) {
-  .container { padding:20px; }
-  input, select, button { font-size:18px; }
-  #logoutBtn { width:50%; height:40px; font-size:14px; }
-  .quickDate { font-size:14px; padding:8px 0; }
-}
+.date-buttons { display:flex; gap:10px; margin-bottom:15px; flex-wrap:wrap; }
+.date-buttons button { flex:1; background:#2196F3; color:white; }
+.date-buttons button:hover { background:#1976D2; }
+@media (max-width: 600px) { .container { padding:20px; } input, select, button { font-size:18px; } .date-buttons { flex-direction:column; } }
 </style>
 </head>
 <body>
 <div class="container">
-  <!-- 登出按鈕 -->
-  <button id="logoutBtn" style="display:none;">登出</button>
-
-  <!-- 標題 -->
-  <h2 id="companyTitle">奇可 出勤打卡紀錄查詢與下載</h2>
-
-  <!-- 登錄表單 -->
+  <!-- 登入頁 -->
   <form id="loginForm">
+    <h2>管理者登入</h2>
     <label>帳號：</label>
     <input type="text" id="username" required>
     <label>密碼：</label>
@@ -75,24 +44,27 @@ tr:nth-child(even){background-color:#f2f2f2;}
     </div>
   </form>
 
-  <!-- 查詢區塊 -->
+  <!-- 查詢頁 -->
   <div id="querySection" style="display:none;">
+    <button id="logoutBtn">登出</button>
+    <h2 id="companyTitle" style="margin-bottom:40px; text-align:center;">出勤打卡紀錄查詢與下載</h2>
+
     <form id="queryForm">
       <label>姓名（可留空）：</label>
       <select id="name"><option value="">全部（不指定）</option></select>
 
-      <!-- 快速按鈕 -->
-      <div class="quickContainer">
-        <button type="button" class="quickDate" data-type="today">今天</button>
-        <button type="button" class="quickDate" data-type="week">本週</button>
-        <button type="button" class="quickDate" data-type="month">本月</button>
-        <button type="button" class="quickDate" data-type="all">全部</button>
+      <div class="date-buttons">
+        <button type="button" data-type="today">今天</button>
+        <button type="button" data-type="week">本週</button>
+        <button type="button" data-type="month">本月</button>
+        <button type="button" data-type="all">全部</button>
       </div>
 
       <label>開始日期：</label>
       <input type="date" id="startDate">
       <label>結束日期：</label>
       <input type="date" id="endDate">
+
       <label>下載格式：</label>
       <select id="format"><option value="csv">CSV</option><option value="xlsx">XLSX</option></select>
 
@@ -113,24 +85,27 @@ tr:nth-child(even){background-color:#f2f2f2;}
 <script>
 const apiBase = 'https://script.google.com/macros/s/AKfycbwzsBpCnqeRGxerNhR-DtnSMF_hZd3_brEYOI2Lnz4ge2srQnuDptkIXkMphoAL4hPJhg/exec';
 let usernameGlobal = '';
-let currentData = [], filteredData = [], currentPage = 1;
+let companyGlobal = '';
+let currentData = [];
+let filteredData = [];
+let currentPage = 1;
 const pageSize = 20;
 
 // ===== 日期初始化 =====
-const today = new Date().toISOString().split('T')[0];
+const today = new Date();
+const todayStr = today.toISOString().split('T')[0];
 const startInput = document.getElementById('startDate');
 const endInput = document.getElementById('endDate');
-startInput.value = today;
-endInput.value = today;
-startInput.setAttribute('max', today);
-endInput.setAttribute('max', today);
+startInput.value = todayStr;
+endInput.value = todayStr;
+startInput.setAttribute('max', todayStr);
+endInput.setAttribute('max', todayStr);
 
-// ===== 日期格式化 yyyy/mm/dd =====
 function formatDateToYMD(dateStr){
   const date = new Date(dateStr);
   const yyyy = date.getFullYear();
-  const mm = ("0" + (date.getMonth()+1)).slice(-2);
-  const dd = ("0" + date.getDate()).slice(-2);
+  const mm = ("0"+(date.getMonth()+1)).slice(-2);
+  const dd = ("0"+date.getDate()).slice(-2);
   return `${yyyy}/${mm}/${dd}`;
 }
 
@@ -145,22 +120,14 @@ document.getElementById('loginBtn').addEventListener('click', async ()=>{
     const json = await res.json();
     if(json.success){
       usernameGlobal = username;
+      companyGlobal = json.company || '奇可';
       document.getElementById('loginForm').style.display='none';
       document.getElementById('querySection').style.display='block';
-      document.getElementById('logoutBtn').style.display='block';
+      document.getElementById('companyTitle').textContent = `${companyGlobal} 出勤打卡紀錄查詢與下載`;
       await fetchNames();
-      await fetchData(formatDateToYMD(today), formatDateToYMD(today), '');
+      await fetchData(formatDateToYMD(todayStr), formatDateToYMD(todayStr), '');
     } else { alert("帳號或密碼錯誤"); }
   } catch(err){ console.error(err); alert("登入失敗，請稍後再試"); }
-});
-
-// ===== 登出 =====
-document.getElementById('logoutBtn').addEventListener('click', ()=>{
-  document.getElementById('loginForm').style.display='block';
-  document.getElementById('querySection').style.display='none';
-  document.getElementById('logoutBtn').style.display='none';
-  document.getElementById('username').value='';
-  document.getElementById('password').value='';
 });
 
 // ===== 取消 =====
@@ -169,12 +136,22 @@ document.getElementById('cancelBtn').addEventListener('click', ()=>{
   document.getElementById('password').value='';
 });
 
+// ===== 登出 =====
+document.getElementById('logoutBtn').addEventListener('click', ()=>{
+  document.getElementById('querySection').style.display='none';
+  document.getElementById('loginForm').style.display='block';
+  document.getElementById('username').value='';
+  document.getElementById('password').value='';
+  usernameGlobal=''; companyGlobal='';
+});
+
 // ===== 取得姓名下拉 =====
 async function fetchNames(){
   try{
     const res = await fetch(`${apiBase}?mode=names&username=${encodeURIComponent(usernameGlobal)}`);
     const json = await res.json();
     const nameSelect=document.getElementById('name');
+    nameSelect.innerHTML='<option value="">全部（不指定）</option>';
     json.names.forEach(name=>{
       const option=document.createElement('option');
       option.value=name; option.textContent=name;
@@ -183,30 +160,86 @@ async function fetchNames(){
   }catch(err){ console.warn("姓名載入失敗", err); }
 }
 
-// ===== 查詢 =====
-document.getElementById('queryBtn').addEventListener('click', async ()=>{
-  const name = document.getElementById('name').value;
-  const startDate = formatDateToYMD(startInput.value);
-  const endDate = formatDateToYMD(endInput.value);
-  await fetchData(startDate,endDate,name);
+// ===== 抓資料函數 =====
+async function fetchData(startDate, endDate, name){
+  let url = `${apiBase}?username=${encodeURIComponent(usernameGlobal)}&startDate=${startDate}&endDate=${endDate}`;
+  if(name) url += `&name=${encodeURIComponent(name)}`;
+  const res = await fetch(url);
+  const data = await res.json();
+  if(!data.length){
+    alert("查無資料");
+    document.getElementById('tableContainer').innerHTML='';
+    document.getElementById('pagination').innerHTML='';
+    currentData=[]; filteredData=[];
+    return;
+  }
+  currentData=data; filteredData=data; currentPage=1;
+  renderTablePage();
+}
+
+// ===== 顯示分頁表格 =====
+function renderTablePage(){
+  const startIndex=(currentPage-1)*pageSize;
+  const pageData=filteredData.slice(startIndex,startIndex+pageSize);
+  let html=`<table><tr>`;
+  if(pageData.length===0){
+    html+='<th>查無資料</th></tr></table>';
+    document.getElementById('tableContainer').innerHTML=html;
+    document.getElementById('pagination').innerHTML='';
+    return;
+  }
+  Object.keys(pageData[0]).forEach(k=>html+=`<th>${k}</th>`);
+  html+='</tr>';
+  pageData.forEach(row=>{
+    html+='<tr>'; Object.values(row).forEach(v=>html+=`<td>${v}</td>`); html+='</tr>';
+  });
+  html+='</table>';
+  document.getElementById('tableContainer').innerHTML=html;
+  renderPagination();
+}
+
+// ===== 分頁 =====
+function renderPagination(){
+  const totalPages=Math.ceil(filteredData.length/pageSize);
+  let html='';
+  if(currentPage>1) html+=`<button onclick="goPage(${currentPage-1})">上一頁</button>`;
+  html+=`第 ${currentPage} / ${totalPages} 頁`;
+  if(currentPage<totalPages) html+=`<button onclick="goPage(${currentPage+1})">下一頁</button>`;
+  document.getElementById('pagination').innerHTML=html;
+}
+function goPage(p){ currentPage=p; renderTablePage(); }
+
+// ===== 快速搜尋 =====
+document.getElementById('quickSearch').addEventListener('input', e=>{
+  const keyword=e.target.value.trim().toLowerCase();
+  filteredData = keyword ? currentData.filter(row=>Object.values(row).some(v=>String(v).toLowerCase().includes(keyword))) : currentData;
+  currentPage=1; renderTablePage();
 });
 
-// ===== 下載 =====
+// ===== 查詢按鈕 =====
+document.getElementById('queryBtn').addEventListener('click', ()=>{
+  const name=document.getElementById('name').value;
+  const startDate=formatDateToYMD(startInput.value);
+  const endDate=formatDateToYMD(endInput.value);
+  fetchData(startDate,endDate,name);
+});
+
+// ===== 下載按鈕 =====
 document.getElementById('downloadBtn').addEventListener('click', ()=>{
   if(!filteredData.length) return alert("沒有資料可下載！");
-  const data = filteredData;
-  const name = document.getElementById('name').value;
-  const format = document.getElementById('format').value;
-  const startDate = formatDateToYMD(startInput.value);
-  const endDate = formatDateToYMD(endInput.value);
-  const fileName = `${name||'所有人'}_${startDate}_至_${endDate}.${format}`;
+  const data=filteredData;
+  const name=document.getElementById('name').value;
+  const format=document.getElementById('format').value;
+  const startDate=formatDateToYMD(startInput.value);
+  const endDate=formatDateToYMD(endInput.value);
+  const fileName=`${name||'所有人'}_${startDate}_至_${endDate}.${format}`;
 
   if(format==="csv"){
-    const csv = convertToCSV(data);
+    const csv=convertToCSV(data);
     downloadBlob(new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8;"}),fileName);
   } else {
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.json_to_sheet(data);
+    const wb=XLSX.utils.book_new();
+    const ws=XLSX.utils.json_to_sheet(data);
     XLSX.utils.book_append_sheet(wb,ws,"打卡紀錄");
     downloadBlob(new Blob([XLSX.write(wb,{bookType:"xlsx",type:"array"})],{type:"application/octet-stream"}),fileName);
   }
@@ -226,75 +259,32 @@ function downloadBlob(blob,fileName){
   link.click();
 }
 
-// ===== 快速搜尋 =====
-document.getElementById('quickSearch').addEventListener('input', e => {
-  const keyword = e.target.value.trim().toLowerCase();
-  filteredData = keyword ? currentData.filter(row=>Object.values(row).some(v=>String(v).toLowerCase().includes(keyword))) : currentData;
-  currentPage=1;
-  renderTablePage();
-});
-
-// ===== 快速按鈕 =====
-document.querySelectorAll('.quickDate').forEach(btn=>{
-  btn.addEventListener('click', async ()=>{
-    const type = btn.dataset.type;
-    const todayDate = new Date();
-    let startDate = todayDate, endDate = todayDate;
-    if(type==="week"){ startDate = new Date(); startDate.setDate(todayDate.getDate() - todayDate.getDay()); }
-    if(type==="month"){ startDate = new Date(todayDate.getFullYear(), todayDate.getMonth(), 1); }
-    if(type==="all"){ startDate = ''; endDate = ''; }
-    startInput.value = startDate ? startDate.toISOString().split('T')[0] : '';
-    endInput.value = endDate ? endDate.toISOString().split('T')[0] : '';
-    const name = document.getElementById('name').value;
-    await fetchData(startInput.value, endInput.value, name);
+// ===== 快捷日期按鈕 =====
+document.querySelectorAll('.date-buttons button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    const type=btn.getAttribute('data-type');
+    const now=new Date();
+    let start, end;
+    if(type==='today'){ start=end=now; }
+    else if(type==='week'){
+      const day=now.getDay();
+      start=new Date(now); start.setDate(now.getDate()-((day+6)%7)); // 周一
+      end=now;
+    }
+    else if(type==='month'){
+      start=new Date(now.getFullYear(), now.getMonth(),1);
+      end=now;
+    }
+    else if(type==='all'){ start=end=null; }
+    startInput.value = start ? start.toISOString().split('T')[0] : '';
+    endInput.value = end ? end.toISOString().split('T')[0] : '';
+    document.getElementById('queryBtn').click();
   });
 });
-
-// ===== 抓資料函數 =====
-async function fetchData(startDate, endDate, name){
-  let url = `${apiBase}?username=${encodeURIComponent(usernameGlobal)}`;
-  if(startDate) url += `&startDate=${startDate}`;
-  if(endDate) url += `&endDate=${endDate}`;
-  if(name) url += `&name=${encodeURIComponent(name)}`;
-  const res = await fetch(url);
-  const data = await res.json();
-  if(!data.length){
-    alert("查無資料");
-    document.getElementById('tableContainer').innerHTML='';
-    document.getElementById('pagination').innerHTML='';
-    filteredData = []; currentData = [];
-    return;
-  }
-  currentData = data;
-  filteredData = data;
-  currentPage=1;
-  renderTablePage();
-}
-
-// ===== 表格分頁 =====
-function renderTablePage(){
-  const startIndex = (currentPage-1)*pageSize;
-  const pageData = filteredData.slice(startIndex,startIndex+pageSize);
-  let html=`<table><tr>`;
-  if(pageData.length===0){ html += '<th>查無資料</th></tr></table>'; document.getElementById('tableContainer').innerHTML=html; document.getElementById('pagination').innerHTML=''; return; }
-  Object.keys(pageData[0]).forEach(k=>html+=`<th>${k}</th>`); html+='</tr>';
-  pageData.forEach(row=>{ html+='<tr>'; Object.values(row).forEach(v=>html+=`<td>${v}</td>`); html+='</tr>'; });
-  html+='</table>';
-  document.getElementById('tableContainer').innerHTML=html;
-  renderPagination();
-}
-function renderPagination(){
-  const totalPages = Math.ceil(filteredData.length/pageSize);
-  let html='';
-  if(currentPage>1) html+=`<button onclick="goPage(${currentPage-1})">上一頁</button>`;
-  html+=`第 ${currentPage} / ${totalPages} 頁`;
-  if(currentPage<totalPages) html+=`<button onclick="goPage(${currentPage+1})">下一頁</button>`;
-  document.getElementById('pagination').innerHTML=html;
-}
-function goPage(p){ currentPage=p; renderTablePage(); }
 </script>
 </body>
 </html>
+
 
 
 
