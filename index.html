@@ -145,97 +145,61 @@ document.getElementById('logoutBtn').addEventListener('click', ()=>{
   usernameGlobal=''; companyGlobal='';
 });
 
-// 取得姓名
+// ===== 取得姓名下拉 =====
 async function fetchNames(){
   try{
     const res = await fetch(`${apiBase}?mode=names&username=${encodeURIComponent(usernameGlobal)}`);
     const json = await res.json();
-    const nameSelect = document.getElementById('name');
-    nameSelect.innerHTML='<option value="">全部（不指定）</option>';
-    json.names.forEach(n=>{
-      const opt = document.createElement('option'); opt.value=n; opt.textContent=n;
-      nameSelect.appendChild(opt);
+    const nameSelect=document.getElementById('name');
+    json.names.forEach(name=>{
+      const option=document.createElement('option');
+      option.value=name; option.textContent=name;
+      nameSelect.appendChild(option);
     });
-  } catch(err){ console.warn(err); }
+  }catch(err){ console.warn("姓名載入失敗", err); }
 }
 
-// 快速日期按鈕
-document.querySelectorAll('.quickDate').forEach(btn=>{
-  btn.addEventListener('click', async e=>{
-    const type = e.target.dataset.type;
-    const now = new Date();
-    let start, end;
-    if(type==='today'){ start=end=formatDateToYMD(now); }
-    else if(type==='week'){
-      const day = now.getDay(); // 0-6
-      start=new Date(now); start.setDate(now.getDate()-day);
-      start=formatDateToYMD(start); end=formatDateToYMD(now);
-    }
-    else if(type==='month'){ start=new Date(now.getFullYear(), now.getMonth(),1); start=formatDateToYMD(start); end=formatDateToYMD(now); }
-    else if(type==='all'){ start=end=''; startInput.value=''; endInput.value=''; }
-    startInput.value=start||''; endInput.value=end||'';
-    await fetchData(start,end,document.getElementById('name').value);
-  });
-});
-
-// 查詢
-document.getElementById('queryBtn').addEventListener('click', async ()=>{
-  await fetchData(startInput.value, endInput.value, document.getElementById('name').value);
-});
-
-// 下載
-document.getElementById('downloadBtn').addEventListener('click', ()=>{
-  if(!filteredData.length) return alert("沒有資料可下載！");
-  const data = filteredData;
-  const name = document.getElementById('name').value;
-  const format = document.getElementById('format').value;
-  const startDate = startInput.value; const endDate=endInput.value;
-  const fileName = `${name||'所有人'}_${startDate}_至_${endDate}.${format}`;
-
-  if(format==="csv"){
-    const csv = convertToCSV(data);
-    downloadBlob(new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8;"}),fileName);
-  }else{
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.json_to_sheet(data);
-    XLSX.utils.book_append_sheet(wb,ws,"打卡紀錄");
-    downloadBlob(new Blob([XLSX.write(wb,{bookType:"xlsx",type:"array"})],{type:"application/octet-stream"}),fileName);
+// ===== 查詢函數 =====
+async function fetchData(startDate, endDate, name){
+  let url = `${apiBase}?username=${encodeURIComponent(usernameGlobal)}&startDate=${startDate}&endDate=${endDate}`;
+  if(name) url += `&name=${encodeURIComponent(name)}`;
+  const res = await fetch(url);
+  const data = await res.json();
+  if(!data.length){
+    alert("查無資料");
+    document.getElementById('tableContainer').innerHTML='';
+    document.getElementById('pagination').innerHTML='';
+    filteredData=[];
+    currentData=[];
+    return;
   }
-});
-
-// 快速搜尋
-document.getElementById('quickSearch').addEventListener('input', e=>{
-  const kw = e.target.value.trim().toLowerCase();
-  filteredData = kw ? currentData.filter(r=>Object.values(r).some(v=>String(v).toLowerCase().includes(kw))) : currentData;
-  currentPage=1; renderTablePage();
-});
-
-// ===== 資料函數 =====
-async function fetchData(startDate,endDate,name){
-  let url=`${apiBase}?username=${encodeURIComponent(usernameGlobal)}&startDate=${startDate}&endDate=${endDate}`;
-  if(name) url+=`&name=${encodeURIComponent(name)}`;
-  const res=await fetch(url);
-  const data=await res.json();
-  currentData=data; filteredData=data; currentPage=1;
-  renderTablePage();
+  currentData=data; filteredData=data; currentPage=1; renderTablePage();
 }
 
-// 分頁表格
+// ===== 顯示分頁 =====
 function renderTablePage(){
-  const startIndex=(currentPage-1)*pageSize;
-  const pageData=filteredData.slice(startIndex,startIndex+pageSize);
-  let html='<table><tr>';
-  if(!pageData.length){ html+='<th>查無資料</th></tr></table>'; document.getElementById('tableContainer').innerHTML=html; document.getElementById('pagination').innerHTML=''; return; }
-  Object.keys(pageData[0]).forEach(k=>html+=`<th>${k}</th>`); html+='</tr>';
-  pageData.forEach(row=>{ html+='<tr>'; Object.values(row).forEach(v=>html+=`<td>${v}</td>`); html+='</tr>'; });
+  const startIndex = (currentPage-1)*pageSize;
+  const pageData = filteredData.slice(startIndex,startIndex+pageSize);
+  let html=`<table><tr>`;
+  if(pageData.length===0){
+    html+='<th>查無資料</th></tr></table>';
+    document.getElementById('tableContainer').innerHTML=html;
+    document.getElementById('pagination').innerHTML='';
+    return;
+  }
+  Object.keys(pageData[0]).forEach(k=>html+=`<th>${k}</th>`);
+  html+='</tr>';
+  pageData.forEach(row=>{
+    html+='<tr>'; Object.values(row).forEach(v=>html+=`<td>${v}</td>`); html+='</tr>';
+  });
   html+='</table>';
   document.getElementById('tableContainer').innerHTML=html;
   renderPagination();
 }
 
-// 分頁
+// ===== 分頁控制 =====
 function renderPagination(){
-  const totalPages=Math.ceil(filteredData.length/pageSize);
+  const totalPages = Math.ceil(filteredData.length/pageSize);
   let html='';
   if(currentPage>1) html+=`<button onclick="goPage(${currentPage-1})">上一頁</button>`;
   html+=`第 ${currentPage} / ${totalPages} 頁`;
@@ -244,7 +208,41 @@ function renderPagination(){
 }
 function goPage(p){ currentPage=p; renderTablePage(); }
 
-// CSV 下載輔助
+// ===== 快速搜尋 =====
+document.getElementById('quickSearch').addEventListener('input', e=>{
+  const keyword=e.target.value.trim().toLowerCase();
+  filteredData = keyword ? currentData.filter(row=>Object.values(row).some(v=>String(v).toLowerCase().includes(keyword))) : currentData;
+  currentPage=1; renderTablePage();
+});
+
+// ===== 查詢/下載按鈕 =====
+document.getElementById('queryBtn').addEventListener('click', async ()=>{
+  const name=document.getElementById('name').value;
+  const startDate=formatDateToYMD(startInput.value);
+  const endDate=formatDateToYMD(endInput.value);
+  await fetchData(startDate,endDate,name);
+});
+document.getElementById('downloadBtn').addEventListener('click', ()=>{
+  if(!filteredData.length) return alert("沒有資料可下載！");
+  const data=filteredData;
+  const name=document.getElementById('name').value;
+  const format=document.getElementById('format').value;
+  const startDate=formatDateToYMD(startInput.value);
+  const endDate=formatDateToYMD(endInput.value);
+  const fileName=`${name||'所有人'}_${startDate}_至_${endDate}.${format}`;
+
+  if(format==="csv"){
+    const csv = convertToCSV(data);
+    downloadBlob(new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8;"}),fileName);
+  } else {
+    const wb=XLSX.utils.book_new();
+    const ws=XLSX.utils.json_to_sheet(data);
+    XLSX.utils.book_append_sheet(wb,ws,"打卡紀錄");
+    downloadBlob(new Blob([XLSX.write(wb,{bookType:"xlsx",type:"array"})],{type:"application/octet-stream"}),fileName);
+  }
+});
+
+// ===== CSV / Blob 下載輔助 =====
 function convertToCSV(data){
   const keys=Object.keys(data[0]);
   const lines=[keys.join(",")];
@@ -257,10 +255,31 @@ function downloadBlob(blob,fileName){
   link.download=fileName;
   link.click();
 }
+
+// ===== 快速日期按鈕 =====
+document.querySelectorAll('.quickDateBtn').forEach(btn=>{
+  btn.addEventListener('click', async e=>{
+    const range=e.target.dataset.range;
+    const now=new Date();
+    let start,todayStr=formatDateToYMD(now.toISOString());
+    if(range==='today'){ start=todayStr; endInput.value=todayStr; startInput.value=todayStr; }
+    else if(range==='week'){ 
+      const firstDay=new Date(now.setDate(now.getDate()-now.getDay()));
+      start=formatDateToYMD(firstDay.toISOString());
+      startInput.value=start; endInput.value=todayStr;
+    }
+    else if(range==='month'){
+      const firstDay=new Date(now.getFullYear(), now.getMonth(), 1);
+      start=formatDateToYMD(firstDay.toISOString());
+      startInput.value=start; endInput.value=todayStr;
+    }
+    else if(range==='all'){ start=''; startInput.value=''; endInput.value=''; }
+    await fetchData(start, todayStr, document.getElementById('name').value);
+  });
+});
 </script>
 </body>
 </html>
-
 
 
 
